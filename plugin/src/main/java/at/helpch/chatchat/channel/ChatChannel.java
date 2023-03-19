@@ -59,6 +59,8 @@ public final class ChatChannel extends AbstractChannel {
         final Predicate<User> filterIgnores = user -> user instanceof ChatUser &&
             (!user.ignoredUsers().contains(source.uuid()) || source.hasPermission(IgnoreCommand.IGNORE_BYPASS_PERMISSION));
 
+        System.out.println("Test");
+
         if (ChatChannel.defaultChannel().equals(this)) {
             return plugin.usersHolder().users().stream()
                 .filter(user -> ChannelUtils.isTargetWithinRadius(source, user, radius()))
