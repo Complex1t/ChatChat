@@ -1,64 +1,78 @@
-package at.helpch.chatchat.util;
+package at.helpch.chatchat.channel;
 
+import at.helpch.chatchat.ChatChatPlugin;
 import at.helpch.chatchat.api.channel.Channel;
+import at.helpch.chatchat.api.holder.FormatsHolder;
 import at.helpch.chatchat.api.user.ChatUser;
 import at.helpch.chatchat.api.user.User;
-import at.helpch.chatchat.channel.ChatChannel;
-import org.bukkit.Location;
+import at.helpch.chatchat.command.IgnoreCommand;
+import at.helpch.chatchat.config.DefaultConfigObjects;
+import at.helpch.chatchat.util.ChannelUtils;
 import org.jetbrains.annotations.NotNull;
+import org.spongepowered.configurate.objectmapping.ConfigSerializable;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
-public final class ChannelUtils {
-    public static final String BASE_CHANNEL_PERMISSION = "chatchat.channel.";
-    public static final String SEE_CHANNEL_PERMISSION = BASE_CHANNEL_PERMISSION + "see.";
-    public static final String USE_CHANNEL_PERMISSION = BASE_CHANNEL_PERMISSION + "use.";
-    public static final String BYPASS_RADIUS_CHANNEL_PERMISSION = BASE_CHANNEL_PERMISSION + "bypass-radius";
+@ConfigSerializable
+public final class ChatChannel extends AbstractChannel {
 
-    private ChannelUtils() {
-        throw new AssertionError("Util classes are not to be instantiated!");
+    private static Channel defaultChannel = DefaultConfigObjects.createDefaultChannel();
+
+    public ChatChannel(
+        @NotNull final String name,
+        @NotNull final String messagePrefix,
+        @NotNull final List<String> toggleCommands,
+        @NotNull final String channelPrefix,
+        @NotNull final FormatsHolder formats,
+        final int radius
+    ) {
+        super(name, messagePrefix, toggleCommands, channelPrefix, formats, radius);
     }
 
-    public static @NotNull Channel findDefaultChannel(
-            @NotNull final Map<String, Channel> channels,
-            @NotNull final String defaultChannel) {
-        final var channel = channels.get(defaultChannel);
-        return Objects.requireNonNullElseGet(channel, ChatChannel::defaultChannel);
+    public static @NotNull Channel defaultChannel() {
+        return defaultChannel;
     }
 
-    public static @NotNull Optional<Channel> findChannelByPrefix(
-            @NotNull final List<Channel> channels,
-            @NotNull final String input) {
-        return channels.stream()
-                .filter(channel -> !channel.messagePrefix().isEmpty()) // ignore empty prefixes
-                .filter(channel -> input.startsWith(channel.messagePrefix()))
-                .findFirst();
+    public static void defaultChannel(@NotNull final Channel toSet) {
+        defaultChannel = toSet;
     }
 
-    public static boolean isTargetWithinRadius(
-            @NotNull final User source,
-            @NotNull final User target,
-            final int radius) {
-        if (!(target instanceof ChatUser)) {
-            return true;
+    private final ChatChatPlugin plugin = ChatChatPlugin.getPlugin(ChatChatPlugin.class);
+
+    @Override
+    public String toString() {
+        return "ChatChannel{" +
+            "name=" + name() +
+            ", messagePrefix='" + messagePrefix() + '\'' +
+            ", toggleCommands='" + commandNames() + '\'' +
+            ", channelPrefix='" + channelPrefix() + '\'' +
+            ", radius='" + radius() +
+            '}';
+    }
+
+    @Override
+    public Set<User> targets(final @NotNull User source) {
+
+        final Predicate<User> filterIgnores = user -> user instanceof ChatUser &&
+            (!user.ignoredUsers().contains(source.uuid()) || source.hasPermission(IgnoreCommand.IGNORE_BYPASS_PERMISSION));
+
+        System.out.println("Test");
+
+        if (ChatChannel.defaultChannel().equals(this)) {
+            return plugin.usersHolder().users().stream()
+                .filter(user -> ChannelUtils.isTargetWithinRadius(source, user, radius()))
+                .filter(filterIgnores)
+                .collect(Collectors.toSet());
         }
 
-        if (target.hasPermission(BYPASS_RADIUS_CHANNEL_PERMISSION)) {
-            return true;
-        }
-
-        if (radius != -1 && source instanceof ChatUser) {
-            final Location sourceLocation = ((ChatUser) source).player().getLocation();
-            final Location targetLocation = ((ChatUser) target).player().getLocation();
-            final int relativeX = targetLocation.getBlockX() - sourceLocation.getBlockX();
-            final int relativeZ = targetLocation.getBlockZ() - sourceLocation.getBlockZ();
-
-            return relativeX*relativeX + relativeZ*relativeZ <= radius*radius;
-        }
-
-        return true;
+        return plugin.usersHolder().users().stream().filter(user ->
+                user.hasPermission(ChannelUtils.SEE_CHANNEL_PERMISSION + name()))
+            .filter(user -> ChannelUtils.isTargetWithinRadius(source, user, radius()))
+            .filter(filterIgnores)
+            .collect(Collectors.toSet());
     }
+
 }
