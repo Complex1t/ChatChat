@@ -5,6 +5,7 @@ import at.helpch.chatchat.api.user.ChatUser;
 import at.helpch.chatchat.hooks.AbstractInternalVanishHook;
 import at.helpch.chatchat.listener.VanillaVanishListener;
 import at.helpch.chatchat.util.VersionHelper;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
@@ -44,6 +45,13 @@ public class VanillaVanishHook extends AbstractInternalVanishHook {
 
     @Override
     public boolean canSee(@NotNull final ChatUser user, @NotNull final ChatUser target) {
-        return user.player().canSee(target.player());
+        //I don't know, sometimes this is null and it prevents people from seeing messages
+        try {
+            return user.player().canSee(target.player());
+        }
+        catch (Exception e) {
+            System.out.println(ChatColor.RED + "Error: something went wrong whilst returning value in canSee method in VanillaVanishHook, returning true");
+            return true;
+        }
     }
 }

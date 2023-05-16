@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
  * Called when a {@link ChatUser} mentions another {@link ChatUser}.
  */
 public class ChannelMentionEvent extends MentionEvent {
-    public ChannelMentionEvent(
+    public ChannelMentionEvent (
         final boolean async,
         @NotNull final ChatUser user,
         @NotNull final User target,

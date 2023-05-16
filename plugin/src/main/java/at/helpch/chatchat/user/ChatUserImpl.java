@@ -9,6 +9,7 @@ import at.helpch.chatchat.cache.ExpiringCache;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.identity.Identity;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -67,7 +68,11 @@ public final class ChatUserImpl implements ChatUser {
 
     @Override
     public boolean hasPermission(@NotNull final String node) {
-        return player().hasPermission(node);
+        Player player = player();
+        if (player != null) {
+            return player().hasPermission(node);
+        }
+        return false;
     }
 
     @Override
@@ -157,8 +162,14 @@ public final class ChatUserImpl implements ChatUser {
     }
 
     @Override
-    public @NotNull Player player() {
-        return Objects.requireNonNull(Bukkit.getPlayer(uuid)); // this will never be null
+    public Player player() {
+        try {
+            return Objects.requireNonNull(Bukkit.getPlayer(uuid)); // this will never be null
+        }
+        catch (NullPointerException e) {
+            System.out.println(ChatColor.RED + "Error: player() with UUID " + uuid.toString() + " in ChatUserImpl was null!");
+        }
+        return null;
     }
 
     @Override
